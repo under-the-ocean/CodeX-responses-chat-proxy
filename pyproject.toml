@@ -1,0 +1,26 @@
+[project]
+name = "responses-chat-proxy"
+authors = ["<Alexander12581> <<1305539689alex@gmail.com>>"]
+version = "0.1.0"
+description = "A small proxy that maps OpenAI Responses API requests to Chat Completions upstreams and converts responses back."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+  { name = "responses-chat-proxy contributors" }
+]
+dependencies = [
+  "fastapi>=0.111.0",
+  "httpx>=0.27.0",
+  "pydantic-settings>=2.2.1",
+  "uvicorn[standard]>=0.30.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
