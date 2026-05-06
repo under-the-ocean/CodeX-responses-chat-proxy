@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import getpass
 import json
 import os
+import socket
 from pathlib import Path
 
 APP_DIR_NAME = ".responses-chat-proxy"
@@ -11,6 +11,7 @@ CONFIG_FILE_NAME = "config.json"
 DEFAULT_UPSTREAM_BASE_URL = "https://api.openai.com/v1"
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8000
+PORT_SEARCH_LIMIT = 100
 DEFAULT_LOG_LEVEL = "info"
 
 
@@ -25,13 +26,14 @@ def main() -> None:
         save_config(config_path, config)
         print(f"Saved configuration to {config_path}")
 
-    apply_runtime_defaults(config)
-    print_startup_message()
+    port = find_available_port(DEFAULT_HOST, DEFAULT_PORT)
+    apply_runtime_defaults(config, port=port)
+    print_startup_message(port)
 
     uvicorn.run(
         "responses_chat_proxy.main:app",
         host=DEFAULT_HOST,
-        port=DEFAULT_PORT,
+        port=port,
         log_level=DEFAULT_LOG_LEVEL,
     )
 
@@ -45,7 +47,7 @@ def load_config(config_path: Path) -> dict[str, str]:
         return {}
 
     try:
-        raw_config = json.loads(config_path.read_text(encoding="utf-8"))
+        raw_config = json.loads(config_path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError) as exc:
         print(f"Could not read saved configuration: {exc}")
         return {}
@@ -69,7 +71,10 @@ def should_reconfigure(config: dict[str, str]) -> bool:
     print("Loaded saved upstream configuration:")
     print(f"  base_url: {config['upstream_base_url']}")
     print(f"  api key : {mask_api_key(config['upstream_api_key'])}")
-    answer = input("Press Enter to start, or type r to reconfigure: ").strip().lower()
+    try:
+        answer = input("Press Enter to start, or type r to reconfigure: ").strip().lower()
+    except EOFError:
+        return False
     return answer in {"r", "reconfigure", "y", "yes"}
 
 
@@ -107,7 +112,7 @@ def prompt_required(prompt: str, *, default: str | None = None) -> str:
 
 def prompt_secret_required(prompt: str) -> str:
     while True:
-        value = getpass.getpass(prompt).strip()
+        value = input(prompt).strip()
         if value:
             return value
         print("This value is required.")
@@ -122,23 +127,41 @@ def save_config(config_path: Path, config: dict[str, str]) -> None:
     config_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
-def apply_runtime_defaults(config: dict[str, str]) -> None:
+def apply_runtime_defaults(config: dict[str, str], *, port: int = DEFAULT_PORT) -> None:
     os.environ["UPSTREAM_BASE_URL"] = config["upstream_base_url"]
     os.environ["UPSTREAM_API_KEY"] = config["upstream_api_key"]
     os.environ["PROXY_API_KEY"] = ""
     os.environ["HOST"] = DEFAULT_HOST
-    os.environ["PORT"] = str(DEFAULT_PORT)
+    os.environ["PORT"] = str(port)
     os.environ.setdefault("LOG_LEVEL", DEFAULT_LOG_LEVEL)
 
 
-def print_startup_message() -> None:
+def print_startup_message(port: int = DEFAULT_PORT) -> None:
     print()
     print("Responses Chat Proxy is starting.")
-    print(f"Local Responses API base_url: http://{DEFAULT_HOST}:{DEFAULT_PORT}/v1")
-    print(f"Responses endpoint: http://{DEFAULT_HOST}:{DEFAULT_PORT}/v1/responses")
+    print(f"Local Responses API base_url: http://{DEFAULT_HOST}:{port}/v1")
+    print(f"Responses endpoint: http://{DEFAULT_HOST}:{port}/v1/responses")
     print("Proxy authentication is disabled for local clients.")
     print("Press Ctrl+C to stop the service.")
     print()
+
+
+def find_available_port(host: str = DEFAULT_HOST, start_port: int = DEFAULT_PORT) -> int:
+    for port in range(start_port, start_port + PORT_SEARCH_LIMIT):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(0.2)
+            if sock.connect_ex((host, port)) == 0:
+                continue
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            try:
+                sock.bind((host, port))
+            except OSError:
+                continue
+            return port
+    raise RuntimeError(
+        f"No available local port found from {start_port} to {start_port + PORT_SEARCH_LIMIT - 1}."
+    )
 
 
 def mask_api_key(api_key: str) -> str:

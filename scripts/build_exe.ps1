@@ -1,5 +1,7 @@
 $ErrorActionPreference = "Stop"
 
+python -m pip install -e ".[build]"
+
 python -m PyInstaller `
   --noconfirm `
   --onefile `

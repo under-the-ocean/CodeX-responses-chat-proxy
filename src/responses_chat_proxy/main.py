@@ -22,7 +22,7 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.post("/v1/responses")
+@app.post("/v1/responses", response_model=None)
 async def create_response(
     request: Request,
     authorization: str | None = Header(default=None),
@@ -204,7 +204,7 @@ def _extract_error_message(error_data: dict[str, Any]) -> str:
     return "Upstream error"
 
 
-@app.post("/v1/chat/completions")
+@app.post("/v1/chat/completions", response_model=None)
 async def chat_completions_passthrough(
     request: Request,
     authorization: str | None = Header(default=None),
