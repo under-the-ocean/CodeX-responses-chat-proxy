@@ -15,7 +15,7 @@ It is designed to be easy to self-host and publish as an independent open-source
 - Converts streaming Chat Completions SSE chunks to Responses API SSE events.
 - Optional `POST /v1/chat/completions` passthrough endpoint.
 - Optional proxy-side bearer token authentication.
-- Configured entirely with environment variables.
+- Supports environment-variable configuration for services and an interactive local launcher for desktop use.
 
 ## Quick Start
 
@@ -44,6 +44,46 @@ python -m responses_chat_proxy
 Or:
 
 ```bash
+uvicorn responses_chat_proxy.main:app --host 0.0.0.0 --port 8000
+```
+
+## Interactive Local Launcher
+
+For desktop/local use, you can run the interactive launcher:
+
+```bash
+responses-chat-proxy
+```
+
+The launcher asks for:
+
+- upstream `base_url`
+- upstream API key
+
+It saves the values to:
+
+```text
+~/.responses-chat-proxy/config.json
+```
+
+On the next start, press Enter to reuse the saved configuration, or type `r` to reconfigure.
+
+The interactive launcher uses these fixed local defaults:
+
+- host: `127.0.0.1`
+- port: `8000`
+- proxy-side authentication: disabled
+
+Clients should use this local Responses API base URL:
+
+```text
+http://127.0.0.1:8000/v1
+```
+
+The traditional service entry points still use environment variables:
+
+```bash
+python -m responses_chat_proxy
 uvicorn responses_chat_proxy.main:app --host 0.0.0.0 --port 8000
 ```
 
@@ -124,6 +164,19 @@ pip install -e ".[dev]"
 pytest
 ```
 
+Build the Windows console executable:
+
+```powershell
+pip install -e ".[build]"
+.\scripts\build_exe.ps1
+```
+
+The executable is written to:
+
+```text
+dist\responses-chat-proxy.exe
+```
+
 ## License
 
 MIT License. See [LICENSE](LICENSE).
@@ -145,16 +198,25 @@ MIT License. See [LICENSE](LICENSE).
 - 将流式 Chat Completions SSE chunk 转换为 Responses API SSE 事件。
 - 可选 `POST /v1/chat/completions` 原样透传端点。
 - 可选代理侧 Bearer Token 鉴权。
-- 完全通过环境变量配置。
+- 服务部署支持环境变量配置，本地桌面使用支持交互式启动器。
 
 ## 快速开始
-
-```bash
+Linux/macOS:
+```  bash
 cd responses-chat-proxy
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
 cp .env.example .env
+```
+
+Windows CMD:
+```bash
+cd responses-chat-proxy
+python -m venv .venv
+.\.venv\Scripts\activate.bat
+pip install -e .
+copy .env.example .env
 ```
 
 Windows PowerShell:
@@ -184,6 +246,46 @@ python -m responses_chat_proxy
 或者：
 
 ```bash
+uvicorn responses_chat_proxy.main:app --host 0.0.0.0 --port 8000
+```
+
+## 交互式本地启动器
+
+本地桌面使用时，可以运行交互式启动器：
+
+```bash
+responses-chat-proxy
+```
+
+启动器会提示输入：
+
+- 上游 `base_url`
+- 上游 API key
+
+首次输入后会保存到：
+
+```text
+~/.responses-chat-proxy/config.json
+```
+
+再次启动时，按 Enter 会直接复用已保存配置；输入 `r` 可以重新配置。
+
+交互式启动器固定使用以下本地默认值：
+
+- 监听地址：`127.0.0.1`
+- 端口：`8000`
+- 代理侧鉴权：关闭
+
+客户端需要填写的 Responses API base URL 是：
+
+```text
+http://127.0.0.1:8000/v1
+```
+
+传统服务启动入口仍然使用环境变量，不会走交互式配置：
+
+```bash
+python -m responses_chat_proxy
 uvicorn responses_chat_proxy.main:app --host 0.0.0.0 --port 8000
 ```
 
@@ -262,6 +364,19 @@ Chat 响应字段：
 ```bash
 pip install -e ".[dev]"
 pytest
+```
+
+构建 Windows 控制台 exe：
+
+```powershell
+pip install -e ".[build]"
+.\scripts\build_exe.ps1
+```
+
+生成的 exe 位于：
+
+```text
+dist\responses-chat-proxy.exe
 ```
 
 ## 开源协议

@@ -1,6 +1,5 @@
 [project]
 name = "responses-chat-proxy"
-authors = ["<Alexander12581> <<1305539689alex@gmail.com>>"]
 version = "0.1.0"
 description = "A small proxy that maps OpenAI Responses API requests to Chat Completions upstreams and converts responses back."
 readme = "README.md"
@@ -16,9 +15,15 @@ dependencies = [
   "uvicorn[standard]>=0.30.0",
 ]
 
+[project.scripts]
+responses-chat-proxy = "responses_chat_proxy.launcher:main"
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0.0",
+]
+build = [
+  "pyinstaller>=6.0.0",
 ]
 
 [tool.pytest.ini_options]
