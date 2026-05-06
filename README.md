@@ -177,6 +177,19 @@ The executable is written to:
 dist\responses-chat-proxy.exe
 ```
 
+Build the macOS console executable on macOS:
+
+```bash
+chmod +x scripts/build_macos.sh
+./scripts/build_macos.sh
+```
+
+The executable is written to:
+
+```text
+dist/macos/responses-chat-proxy
+```
+
 ## License
 
 MIT License. See [LICENSE](LICENSE).
