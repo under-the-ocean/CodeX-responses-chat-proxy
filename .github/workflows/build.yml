@@ -1,0 +1,181 @@
+﻿name: Build Linux & Windows
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-linux-x86_64:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[build]"
+
+      - name: Build with PyInstaller
+        run: |
+          python -m PyInstaller \
+            --noconfirm \
+            --onefile \
+            --console \
+            --name responses-chat-proxy \
+            --specpath build/linux \
+            --workpath build/linux/work \
+            --distpath dist/linux \
+            --paths src \
+            --hidden-import responses_chat_proxy.main \
+            --exclude-module IPython \
+            --exclude-module matplotlib \
+            --exclude-module numpy \
+            --exclude-module pandas \
+            --exclude-module pygame \
+            --exclude-module PyQt5 \
+            --exclude-module PySide6 \
+            --exclude-module pytest \
+            scripts/launcher_entry.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: responses-chat-proxy-linux-x86_64
+          path: dist/linux/responses-chat-proxy
+          if-no-files-found: error
+
+  build-linux-aarch64:
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[build]"
+
+      - name: Build with PyInstaller
+        run: |
+          python -m PyInstaller \
+            --noconfirm \
+            --onefile \
+            --console \
+            --name responses-chat-proxy \
+            --specpath build/linux \
+            --workpath build/linux/work \
+            --distpath dist/linux \
+            --paths src \
+            --hidden-import responses_chat_proxy.main \
+            --exclude-module IPython \
+            --exclude-module matplotlib \
+            --exclude-module numpy \
+            --exclude-module pandas \
+            --exclude-module pygame \
+            --exclude-module PyQt5 \
+            --exclude-module PySide6 \
+            --exclude-module pytest \
+            scripts/launcher_entry.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: responses-chat-proxy-linux-aarch64
+          path: dist/linux/responses-chat-proxy
+          if-no-files-found: error
+
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[build]"
+
+      - name: Build with PyInstaller
+        shell: pwsh
+        run: |
+          python -m PyInstaller `
+            --noconfirm `
+            --onefile `
+            --console `
+            --name responses-chat-proxy `
+            --specpath build/windows `
+            --workpath build/windows/work `
+            --distpath dist/windows `
+            --paths src `
+            --hidden-import responses_chat_proxy.main `
+            --exclude-module IPython `
+            --exclude-module matplotlib `
+            --exclude-module numpy `
+            --exclude-module pandas `
+            --exclude-module pygame `
+            --exclude-module PyQt5 `
+            --exclude-module PySide6 `
+            --exclude-module pytest `
+            scripts\launcher_entry.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: responses-chat-proxy-windows-x86_64
+          path: dist/windows/responses-chat-proxy.exe
+          if-no-files-found: error
+
+  create-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-linux-x86_64, build-linux-aarch64, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: Display structure
+        run: ls -R release-artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-artifacts/responses-chat-proxy-linux-x86_64/responses-chat-proxy
+            release-artifacts/responses-chat-proxy-linux-aarch64/responses-chat-proxy
+            release-artifacts/responses-chat-proxy-windows-x86_64/responses-chat-proxy.exe
+          generate_release_notes: true
+          draft: true
