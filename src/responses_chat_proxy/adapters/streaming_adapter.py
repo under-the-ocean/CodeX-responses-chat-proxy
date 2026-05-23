@@ -20,6 +20,7 @@ class StreamingConverter:
         self.created = 0
         self.message_role = "assistant"
 
+        self.reasoning_content = ""
         self.full_text = ""
         self.tool_calls: dict[int, dict[str, Any]] = {}
         self.sse_buffer = ""
@@ -147,6 +148,10 @@ class StreamingConverter:
 
         if delta.get("role"):
             self.message_role = delta["role"]
+
+        reasoning_content = delta.get("reasoning_content")
+        if reasoning_content:
+            self.reasoning_content += reasoning_content
 
         content = delta.get("content")
         if content:
@@ -286,6 +291,7 @@ class StreamingConverter:
                                 ]
                                 if self.content_part_added
                                 else [],
+                            "reasoning_content": self.reasoning_content,
                             },
                         },
                     )
@@ -350,6 +356,15 @@ class StreamingConverter:
 
     def _build_output(self) -> list[dict[str, Any]]:
         output: list[dict[str, Any]] = []
+        if self.reasoning_content:
+            output.append(
+                {
+                    "id": f"rs_{self.response_id.replace('resp-', '', 1).replace('resp_', '') or 'unknown'}",
+                    "type": "reasoning",
+                    "content": [],
+                    "summary": [{"type": "summary_text", "text": self.reasoning_content}],
+                }
+            )
         if self.content_part_added:
             output.append(
                 {
@@ -358,6 +373,7 @@ class StreamingConverter:
                     "status": "completed",
                     "role": self.message_role,
                     "content": [{"type": "output_text", "text": self.full_text, "annotations": []}],
+                    "reasoning_content": self.reasoning_content,
                 }
             )
         for _, tool_call in sorted(self.tool_calls.items()):

@@ -14,6 +14,9 @@ def convert_response(chat_response: dict[str, Any], original_request: dict[str, 
     finish_reason = choice.get("finish_reason") if isinstance(choice, dict) else None
 
     output = []
+    reasoning_item = _build_reasoning_item(message, response_id)
+    if reasoning_item:
+        output.append(reasoning_item)
     if isinstance(message, dict) and message:
         output_item = _build_output_item(message, response_id, finish_reason)
         if output_item:
@@ -69,6 +72,9 @@ def _build_output_item(
         "role": role,
         "content": [],
     }
+    reasoning_content = message.get("reasoning_content")
+    if isinstance(reasoning_content, str) and reasoning_content:
+        output_item["reasoning_content"] = reasoning_content
 
     if content:
         if isinstance(content, str):
@@ -88,6 +94,20 @@ def _build_output_item(
                     output_item["content"].append(converted)
 
     return output_item
+
+
+def _build_reasoning_item(message: dict[str, Any], response_id: str) -> dict[str, Any] | None:
+    reasoning_content = message.get("reasoning_content")
+    if not isinstance(reasoning_content, str) or not reasoning_content:
+        return None
+
+    item_id = f"rs_{response_id.replace('resp-', '', 1).replace('resp_', '')}"
+    return {
+        "id": item_id,
+        "type": "reasoning",
+        "content": [],
+        "summary": [{"type": "summary_text", "text": reasoning_content}],
+    }
 
 
 def _convert_output_part(part: dict[str, Any]) -> dict[str, Any] | None:
